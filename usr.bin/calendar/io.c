@@ -1,4 +1,4 @@
-/*	$OpenBSD: io.c,v 1.47 2017/09/25 19:13:56 krw Exp $	*/
+/*	$OpenBSD: io.c,v 1.49 2019/06/28 13:35:00 deraadt Exp $	*/
 
 /*
  * Copyright (c) 1989, 1993, 1994
@@ -28,7 +28,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
 
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -327,12 +326,12 @@ opencal(void)
 			if (!(chdir(home) == 0 &&
 			    chdir(calendarHome) == 0 &&
 			    (fdin = open(calendarFile, O_RDONLY)) != -1))
-				errx(1, "no calendar file: ``%s'' or ``~/%s/%s''",
+				errx(1, "no calendar file: \"%s\" or \"~/%s/%s\"",
 				    calendarFile, calendarHome, calendarFile);
 		}
 	}
 
-	if (pipe(pdes) < 0) {
+	if (pipe(pdes) == -1) {
 		close(fdin);
 		return (NULL);
 	}
@@ -394,7 +393,7 @@ closecal(FILE *fp)
 	(void)rewind(fp);
 	if (fstat(fileno(fp), &sbuf) || !sbuf.st_size)
 		goto done;
-	if (pipe(pdes) < 0)
+	if (pipe(pdes) == -1)
 		goto done;
 	switch ((pid = vfork())) {
 	case -1:			/* error */

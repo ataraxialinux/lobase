@@ -31,7 +31,6 @@
  */
 
 #include <sys/types.h>
-#include <sys/ioctl.h>
 
 #include <stddef.h>
 #include <string.h>
@@ -79,7 +78,7 @@ const struct modes cmodes[] = {
 	{ "-clocal",	0, CLOCAL },
 	{ "crtscts",	CRTSCTS, 0 },
 	{ "-crtscts",	0, CRTSCTS },
-#if 0
+#ifdef __OpenBSD__
 	{ "mdmbuf",	MDMBUF, 0 },
 	{ "-mdmbuf",	0, MDMBUF },
 #endif
@@ -139,7 +138,7 @@ const struct modes lmodes[] = {
 	{ "-echoke",	0, ECHOKE },
 	{ "crtkill",	ECHOKE, 0 },
 	{ "-crtkill",	0, ECHOKE },
-#if ALTWERASE
+#ifdef __OpenBSD__
 	{ "altwerase",	ALTWERASE, 0 },
 	{ "-altwerase",	0, ALTWERASE },
 #endif
@@ -171,7 +170,7 @@ const struct modes lmodes[] = {
 	{ "-crt",	ECHOK, ECHOE|ECHOKE|ECHOCTL },
 	{ "newcrt",	ECHOE|ECHOKE|ECHOCTL, ECHOK|ECHOPRT },
 	{ "-newcrt",	ECHOK, ECHOE|ECHOKE|ECHOCTL },
-#if NOKERNINFO
+#ifdef __OpenBSD__
 	{ "nokerninfo",	NOKERNINFO, 0 },
 	{ "-nokerninfo",0, NOKERNINFO },
 	{ "kerninfo",	0, NOKERNINFO },
@@ -197,13 +196,11 @@ const struct modes omodes[] = {
 	{ "-onlret",	0, ONLRET },
 	{ "onocr",	ONOCR, 0 },
 	{ "-onocr",	0, ONOCR },
-#if OXTABS
+#ifdef __OpenBSD__
 	{ "tabs",	0, OXTABS },		/* "preserve" tabs */
 	{ "-tabs",	OXTABS, 0 },
 	{ "oxtabs",	OXTABS, 0 },
 	{ "-oxtabs",	0, OXTABS },
-#endif
-#if ONOEOT
 	{ "onoeot",	ONOEOT, 0 },
 	{ "-onoeot",	0, ONOEOT },
 #endif

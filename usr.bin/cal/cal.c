@@ -33,7 +33,6 @@
  * SUCH DAMAGE.
  */
 
-
 #include <sys/types.h>
 
 #include <ctype.h>

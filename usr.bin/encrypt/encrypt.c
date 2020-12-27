@@ -1,4 +1,4 @@
-/*	$OpenBSD: encrypt.c,v 1.47 2017/05/24 09:19:55 mestre Exp $	*/
+/*	$OpenBSD: encrypt.c,v 1.50 2019/09/14 17:47:00 semarie Exp $	*/
 
 /*
  * Copyright (c) 1996, Jason Downs.  All rights reserved.
@@ -74,19 +74,14 @@ print_passwd(char *string, int operation, char *extra)
 		    sizeof(prefbuf))
 			errx(1, "pref too long");
 		pref = prefbuf;
-	} else {
 #ifdef HAVE_LOGIN_CAP_H
+	} else {
 		login_cap_t *lc;
 
 		if ((lc = login_getclass(extra)) == NULL)
 			errx(1, "unable to get login class `%s'",
 			    extra ? (char *)extra : "default");
 		pref = login_getcapstr(lc, "localcipher", NULL, NULL);
-#else
-		/* XXX: is this in sync with the default from login_class? */
-		pref = extra;
-		if (extra == NULL)
-			pref = "blowfish,a";
 #endif
 	}
 	if (crypt_newhash(string, pref, buffer, sizeof(buffer)) != 0)
@@ -104,7 +99,12 @@ main(int argc, char **argv)
 	char *extra = NULL;	/* Store login class or number of rounds */
 	const char *errstr;
 
-	if (pledge("stdio rpath wpath tty", NULL) == -1)
+#ifdef __OpenBSD__
+	if (unveil(_PATH_LOGIN_CONF, "r") == -1 ||
+	    unveil(_PATH_LOGIN_CONF ".db", "r") == -1)
+		err(1, "unveil");
+#endif
+	if (pledge("stdio rpath tty", NULL) == -1)
 		err(1, "pledge");
 
 	while ((opt = getopt(argc, argv, "pb:c:")) != -1) {

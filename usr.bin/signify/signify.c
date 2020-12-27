@@ -1,4 +1,4 @@
-/* $OpenBSD: signify.c,v 1.128 2017/07/11 23:27:13 tedu Exp $ */
+/* $OpenBSD: signify.c,v 1.135 2020/01/21 12:13:21 tb Exp $ */
 /*
  * Copyright (c) 2013 Ted Unangst <tedu@openbsd.org>
  *
@@ -14,8 +14,6 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-
-
 #include <sys/stat.h>
 
 #include <netinet/in.h>
@@ -80,9 +78,9 @@ usage(const char *error)
 		fprintf(stderr, "%s\n", error);
 	fprintf(stderr, "usage:"
 #ifndef VERIFYONLY
-	    "\t%1$s -C [-q] -p pubkey -x sigfile [file ...]\n"
+	    "\t%1$s -C [-q] [-p pubkey] [-t keytype] -x sigfile [file ...]\n"
 	    "\t%1$s -G [-n] [-c comment] -p pubkey -s seckey\n"
-	    "\t%1$s -S [-ez] [-x sigfile] -s seckey -m message\n"
+	    "\t%1$s -S [-enz] [-x sigfile] -s seckey -m message\n"
 #endif
 	    "\t%1$s -V [-eqz] [-p pubkey] [-t keytype] [-x sigfile] -m message\n",
 	    getprogname());
@@ -144,9 +142,11 @@ parseb64file(const char *filename, char *b64, void *buf, size_t buflen,
 		errx(1, "missing new line after base64 in %s", filename);
 	*b64end = '\0';
 	if (b64_pton(commentend + 1, buf, buflen) != buflen)
-		errx(1, "invalid base64 encoding in %s", filename);
+		errx(1, "unable to parse %s", filename);
 	if (memcmp(buf, PKALG, 2) != 0)
 		errx(1, "unsupported file %s", filename);
+	*commentend = '\n';
+	*b64end = '\n';
 	return b64end - b64 + 1;
 }
 
@@ -256,6 +256,7 @@ kdf(uint8_t *salt, size_t saltlen, int rounds, int allowstdin, int confirm,
 {
 	char pass[1024];
 	int rppflags = RPP_ECHO_OFF;
+	const char *errstr = NULL;
 
 	if (rounds == 0) {
 		memset(key, 0, keylen);
@@ -272,15 +273,17 @@ kdf(uint8_t *salt, size_t saltlen, int rounds, int allowstdin, int confirm,
 		char pass2[1024];
 		if (!readpassphrase("confirm passphrase: ", pass2,
 		    sizeof(pass2), rppflags))
-			errx(1, "unable to read passphrase");
-		if (strcmp(pass, pass2) != 0)
-			errx(1, "passwords don't match");
+			errstr = "unable to read passphrase";
+		if (!errstr && strcmp(pass, pass2) != 0)
+			errstr = "passwords don't match";
 		explicit_bzero(pass2, sizeof(pass2));
 	}
-	if (bcrypt_pbkdf(pass, strlen(pass), salt, saltlen, key,
+	if (!errstr && bcrypt_pbkdf(pass, strlen(pass), salt, saltlen, key,
 	    keylen, rounds) == -1)
-		errx(1, "bcrypt pbkdf");
+		errstr = "bcrypt pbkdf";
 	explicit_bzero(pass, sizeof(pass));
+	if (errstr)
+		errx(1, "%s", errstr);
 }
 
 static void
@@ -329,7 +332,7 @@ generate(const char *pubkeyfile, const char *seckeyfile, int rounds,
 	explicit_bzero(xorkey, sizeof(xorkey));
 
 	nr = snprintf(commentbuf, sizeof(commentbuf), "%s secret key", comment);
-	if (nr == -1 || nr >= sizeof(commentbuf))
+	if (nr < 0 || nr >= sizeof(commentbuf))
 		errx(1, "comment too long");
 	writekeyfile(seckeyfile, commentbuf, &enckey,
 	    sizeof(enckey), O_EXCL, 0600);
@@ -338,7 +341,7 @@ generate(const char *pubkeyfile, const char *seckeyfile, int rounds,
 	memcpy(pubkey.pkalg, PKALG, 2);
 	memcpy(pubkey.keynum, keynum, KEYNUMLEN);
 	nr = snprintf(commentbuf, sizeof(commentbuf), "%s public key", comment);
-	if (nr == -1 || nr >= sizeof(commentbuf))
+	if (nr < 0 || nr >= sizeof(commentbuf))
 		errx(1, "comment too long");
 	writekeyfile(pubkeyfile, commentbuf, &pubkey,
 	    sizeof(pubkey), O_EXCL, 0666);
@@ -402,7 +405,7 @@ createsig(const char *seckeyfile, const char *msgfile, uint8_t *msg,
 		nr = snprintf(sigcomment, sizeof(sigcomment),
 		    VERIFYWITH "%.*s.pub", (int)strlen(keyname) - 4, keyname);
 	}
-	if (nr == -1 || nr >= sizeof(sigcomment))
+	if (nr < 0 || nr >= sizeof(sigcomment))
 		errx(1, "comment too long");
 
 	if (memcmp(enckey.kdfalg, KDFALG, 2) != 0)
@@ -503,7 +506,7 @@ readpubkey(const char *pubkeyfile, struct pubkey *pubkey,
     const char *sigcomment, const char *keytype)
 {
 	const char *safepath = "/etc/signify";
-	char keypath[1024];
+	char keypath[PATH_MAX];
 
 	if (!pubkeyfile) {
 		pubkeyfile = strstr(sigcomment, VERIFYWITH);
@@ -712,13 +715,13 @@ verifychecksums(char *msg, int argc, char **argv, int quiet)
 }
 
 static void
-check(const char *pubkeyfile, const char *sigfile, int quiet, int argc,
-    char **argv)
+check(const char *pubkeyfile, const char *sigfile, const char *keytype,
+    int quiet, int argc, char **argv)
 {
 	unsigned long long msglen;
 	uint8_t *msg;
 
-	msg = verifyembedded(pubkeyfile, sigfile, quiet, &msglen, NULL);
+	msg = verifyembedded(pubkeyfile, sigfile, quiet, &msglen, keytype);
 	verifychecksums((char *)msg, argc, argv, quiet);
 
 	free(msg);
@@ -753,7 +756,8 @@ main(int argc, char **argv)
 	char sigfilebuf[PATH_MAX];
 	const char *comment = "signify";
 	char *keytype = NULL;
-	int ch, rounds;
+	int ch;
+	int none = 0;
 	int embedded = 0;
 	int quiet = 0;
 	int gzip = 0;
@@ -767,8 +771,6 @@ main(int argc, char **argv)
 
 	if (pledge("stdio rpath wpath cpath tty", NULL) == -1)
 		err(1, "pledge");
-
-	rounds = 42;
 
 	while ((ch = getopt(argc, argv, "CGSVzc:em:np:qs:t:x:")) != -1) {
 		switch (ch) {
@@ -807,7 +809,7 @@ main(int argc, char **argv)
 			msgfile = optarg;
 			break;
 		case 'n':
-			rounds = 0;
+			none = 1;
 			break;
 		case 'p':
 			pubkeyfile = optarg;
@@ -844,7 +846,7 @@ main(int argc, char **argv)
 			err(1, "pledge");
 		if (!sigfile)
 			usage("must specify sigfile");
-		check(pubkeyfile, sigfile, quiet, argc, argv);
+		check(pubkeyfile, sigfile, keytype, quiet, argc, argv);
 		return 0;
 	}
 #endif
@@ -858,7 +860,7 @@ main(int argc, char **argv)
 			usage("must specify sigfile with - message");
 		nr = snprintf(sigfilebuf, sizeof(sigfilebuf),
 		    "%s.sig", msgfile);
-		if (nr == -1 || nr >= sizeof(sigfilebuf))
+		if (nr < 0 || nr >= sizeof(sigfilebuf))
 			errx(1, "path too long");
 		sigfile = sigfilebuf;
 	}
@@ -870,14 +872,14 @@ main(int argc, char **argv)
 		if (!pubkeyfile || !seckeyfile)
 			usage("must specify pubkey and seckey");
 		check_keyname_compliance(pubkeyfile, seckeyfile);
-		generate(pubkeyfile, seckeyfile, rounds, comment);
+		generate(pubkeyfile, seckeyfile, none ? 0 : 42, comment);
 		break;
 	case SIGN:
 		/* no pledge */
 		if (gzip) {
 			if (!msgfile || !seckeyfile || !sigfile)
 				usage("must specify message sigfile seckey");
-			zsign(seckeyfile, msgfile, sigfile);
+			zsign(seckeyfile, msgfile, sigfile, none);
 		} else {
 			if (!msgfile || !seckeyfile)
 				usage("must specify message and seckey");

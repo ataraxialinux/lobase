@@ -1,10 +1,8 @@
-<<<<<<< bin/ksh/ksh.1
-=======
+.\"	$OpenBSD: ksh.1,v 1.210 2020/09/20 14:40:45 millert Exp $
 .\"
 .\"	Public Domain
 .\"
-<<<<<<< bin/ksh/ksh.1
-=======
+.Dd $Mdocdate: September 20 2020 $
 .Dt KSH 1
 .Os
 .Sh NAME
@@ -363,7 +361,9 @@ token to form pipelines, in which the standard output of each command but the
 last is piped (see
 .Xr pipe 2 )
 to the standard input of the following command.
-The exit status of a pipeline is that of its last command.
+The exit status of a pipeline is that of its last command, unless the
+.Ic pipefail
+option is set.
 A pipeline may be prefixed by the
 .Ql \&!
 reserved word, which causes the exit status of the pipeline to be logically
@@ -542,7 +542,7 @@ if no
 .Ar list
 is executed, the exit status is zero.
 .It Xo Ic for Ar name
-.Oo Cm in Ar word No ... Oc ;
+.Op Cm in Op Ar word ... ;
 .Cm do Ar list ; Cm done
 .Xc
 For each
@@ -566,10 +566,10 @@ e.g.\&
 The exit status of a
 .Ic for
 statement is the last exit status of
-.Ar list ;
-if
+.Ar list .
+If there are no items,
 .Ar list
-is never executed, the exit status is zero.
+is not executed and the exit status is zero.
 .It Xo Ic if Ar list ;
 .Cm then Ar list ;
 .Oo Cm elif Ar list ;
@@ -752,12 +752,13 @@ expressions are patterns (e.g. the comparison
 .Ic [[ foobar = f*r ]]
 succeeds).
 .It
-There are two additional binary operators,
+The
 .Ql <
 and
-.Ql > ,
-which return true if their first string operand is less than, or greater than,
-their second string operand, respectively.
+.Ql >
+binary operators do not need to be quoted with the
+.Ql \e
+character.
 .It
 The single argument form of
 .Ic test ,
@@ -860,8 +861,6 @@ The following command aliases are defined automatically by the shell:
 .Ic r Ns ='fc -s'
 .It
 .Ic stop Ns ='kill -STOP'
-.It
-.Ic type Ns ='whence -v'
 .El
 .Pp
 Tracked aliases allow the shell to remember where it found a particular
@@ -1344,7 +1343,7 @@ Note that if
 .Ev CDPATH
 is set and does not contain
 .Sq \&.
-or contains an empty path, the current directory is not searched.
+or an empty path, the current directory is not searched.
 Also, the
 .Ic cd
 built-in command will display the resulting directory when a match is found
@@ -1721,6 +1720,10 @@ loops to store the value that is read from standard input.
 The number of seconds since the shell started or, if the parameter has been
 assigned an integer value, the number of seconds since the assignment plus the
 value that was assigned.
+.It Ev TERM
+The user's terminal type.
+If set, it will be used to determine the escape sequence used to
+clear the screen.
 .It Ev TMOUT
 If set to a positive integer in an interactive shell, it specifies the maximum
 number of seconds the shell will wait for input after printing the primary
@@ -2790,18 +2793,16 @@ for more information.
 .Ar string Ns = Ns Op Ar editing-command
 .Ar ...
 .Xc
-<<<<<<< bin/ksh/ksh.1
 In
-=======
-In
+.Sx Emacs editing mode ,
+the specified editing command is bound to the given
 .Ar string .
 Future input of the
 .Ar string
 will cause the editing command to be immediately invoked.
-<<<<<<< bin/ksh/ksh.1
 Bindings have no effect in
-=======
-Bindings have no effect in
+.Sx Vi editing mode .
+.Pp
 If the
 .Fl m
 flag is given, the specified input
@@ -2867,7 +2868,9 @@ is set, it lists the search path for the directory containing
 .Ar dir .
 A
 .Dv NULL
-path means the current directory.
+path or
+.Ql .\&
+means the current directory.
 If
 .Ar dir
 is found in any component of the
@@ -3663,6 +3666,10 @@ See the
 and
 .Ic pwd
 commands above for more details.
+.It Ic pipefail
+The exit status of a pipeline is the exit status of the rightmost
+command in the pipeline that doesn't return 0, or 0 if all commands
+returned a 0 exit status.
 .It Ic posix
 Enable POSIX mode.
 See
@@ -3892,6 +3899,10 @@ Strings are equal.
 Strings are equal.
 .It Ar string No != Ar string
 Strings are not equal.
+.It Ar string No > Ar string
+Strings compare greater than based on the ASCII value of their characters.
+.It Ar string No < Ar string
+Strings compare less than based on the ASCII value of their characters.
 .It Ar number Fl eq Ar number
 Numbers compare equal.
 .It Ar number Fl ne Ar number
@@ -4078,6 +4089,11 @@ traps in functions are not yet implemented.
 .Pp
 .It Ic true
 A command that exits with a zero value.
+.Pp
+.It Ic type
+Short form of
+.Ic command Fl V
+(see above).
 .Pp
 .It Xo
 .Ic typeset
@@ -4665,8 +4681,7 @@ Simply causes the character to appear as literal input.
 Most ordinary characters are bound to this.
 .It Xo backward-char:
 .Op Ar n
-<<<<<<< bin/ksh/ksh.1
-=======
+.No ^B , ^X^D
 .Xc
 Moves the cursor backward
 .Ar n
@@ -4692,6 +4707,11 @@ Moves the cursor to the beginning of the edited input line.
 Uppercase the first character in the next
 .Ar n
 words, leaving the cursor past the end of the last word.
+.It clear-screen: ^L
+Clears the screen if the
+.Ev TERM
+parameter is set and the terminal supports clearing the screen, then
+reprints the prompt string and the current input line.
 .It comment: ^[#
 If the current line does not begin with a comment character, one is added at
 the beginning of the line and the line is entered (as if return had been
@@ -4759,8 +4779,7 @@ Deletes
 characters after the cursor.
 .It Xo delete-word-backward:
 .Op Ar n
-<<<<<<< bin/ksh/ksh.1
-=======
+.No WERASE , ^[ERASE , ^W, ^[^? , ^[^H , ^[h
 .Xc
 Deletes
 .Ar n
@@ -4885,7 +4904,7 @@ The last
 word of the previous command is inserted at the cursor.
 .It quote: ^^
 The following character is taken literally rather than as an editing command.
-.It redraw: ^L
+.It redraw:
 Reprints the prompt string and the current input line.
 .It Xo search-character-backward:
 .Op Ar n
@@ -4946,6 +4965,14 @@ Inserts the most recently killed text string at the current cursor position.
 Immediately after a
 .Ic yank ,
 replaces the inserted text string with the next previously killed text string.
+.El
+.Pp
+The following editing commands lack default bindings but can be used with the
+.Ic bind
+command:
+.Bl -tag -width Ds
+.It kill-region
+Deletes the input between the cursor and the mark.
 .El
 .Ss Vi editing mode
 The vi command-line editor in
@@ -5026,6 +5053,13 @@ Erases previous character.
 .It ^J | ^M
 End of line.
 The current line is read, parsed, and executed by the shell.
+.It ^L
+Clear the screen (if possible) and redraw the current line.
+See the
+.Em clear-screen
+command in
+.Sx Emacs editing mode
+for more information.
 .It ^V
 Literal next.
 The next character typed is not treated specially (can be used
@@ -5483,7 +5517,9 @@ Miscellaneous vi commands
 .Bl -tag -width Ds
 .It ^J and ^M
 The current line is read, parsed, and executed by the shell.
-.It ^L and ^R
+.It ^L
+Clear the screen (if possible) and redraw the current line.
+.It ^R
 Redraw the current line.
 .It Xo
 .Oo Ar n Oc Ns \&.
@@ -5526,10 +5562,12 @@ Privileged shell profile.
 .Rs
 .%A Morris Bolsky
 .%A David Korn
-.%B The KornShell Command and Programming Language, 2nd Edition
-.%D 1995
+.%B The KornShell Command and Programming Language
+.%D First Edition 1989
 .%I Prentice Hall
-.%O ISBN 0131827006
+.%O ISBN 0135169720
+.\" The second edition of the above book (1995) is about ksh93,
+.\" but the OpenBSD ksh is a descendant from ksh88 via pdksh.
 .Re
 .Rs
 .%A Stephen G. Kochan

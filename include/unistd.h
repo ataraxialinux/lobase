@@ -54,6 +54,7 @@ void	*setmode(const char *);
 int	 setresgid(gid_t, gid_t, gid_t);
 int	 setresuid(uid_t, uid_t, uid_t);
 int	 pledge(const char *, const char *[]);
+int	 unveil(const char *path, const char *permissions);
 
 #ifndef _GETOPT_DEFINED_
 #define _GETOPT_DEFINED_

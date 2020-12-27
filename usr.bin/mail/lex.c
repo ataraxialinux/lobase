@@ -1,4 +1,4 @@
-/*	$OpenBSD: lex.c,v 1.39 2015/10/16 17:56:07 mmcc Exp $	*/
+/*	$OpenBSD: lex.c,v 1.41 2019/06/28 13:35:01 deraadt Exp $	*/
 /*	$NetBSD: lex.c,v 1.10 1997/05/17 19:55:13 pk Exp $	*/
 
 /*
@@ -58,7 +58,7 @@ setfile(char *name)
 	int i, fd;
 	struct stat stb;
 	char isedit = *name != '%';
-	char *who = name[1] ? name + 1 : myname;
+	const char *who = name[1] ? name + 1 : myname;
 	char tempname[PATHSIZE];
 	static int shudclob;
 
@@ -72,7 +72,7 @@ setfile(char *name)
 		return(-1);
 	}
 
-	if (fstat(fileno(ibuf), &stb) < 0) {
+	if (fstat(fileno(ibuf), &stb) == -1) {
 		warn("fstat");
 		(void)Fclose(ibuf);
 		return(-1);
@@ -108,7 +108,7 @@ setfile(char *name)
 	 * and set pointers.
 	 */
 	readonly = 0;
-	if ((i = open(name, O_WRONLY, 0)) < 0)
+	if ((i = open(name, O_WRONLY, 0)) == -1)
 		readonly++;
 	else
 		(void)close(i);

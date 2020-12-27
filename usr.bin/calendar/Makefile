@@ -1,12 +1,11 @@
 #	$OpenBSD: Makefile,v 1.11 2016/09/11 06:40:57 natano Exp $
 
-.TOPDIR?=../..
+
+TOPDIR?=../..
 
 PROG=	calendar
 SRCS=   calendar.c io.c day.c pesach.c ostern.c paskha.c
 INTER=	de_DE.UTF-8 hr_HR.UTF-8 ru_RU.UTF-8 fr_FR.UTF-8
-CPPFLAGS+=	-D'_PATH_CPP="${libexecdir}/tradcpp"'
-CPPFLAGS+=	-D'_PATH_INCLUDE="-I${SHAREDIR}/calendar"'
 
 beforeinstall:
 	${INSTALL} -d ${DESTDIR}${SHAREDIR}/calendar

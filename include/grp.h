@@ -42,7 +42,8 @@
 
 #include <sys/types.h>
 
-char		*group_from_gid(gid_t, int);
+int		 gid_from_group(const char *, gid_t *);
+const char	*group_from_gid(gid_t, int);
 
 #endif /* !_COMPAT_GRP_H_ */
 

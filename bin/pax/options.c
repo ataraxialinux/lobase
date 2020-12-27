@@ -1,4 +1,4 @@
-/*	$OpenBSD: options.c,v 1.101 2016/12/26 23:43:52 krw Exp $	*/
+/*	$OpenBSD: options.c,v 1.103 2019/11/15 20:34:17 naddy Exp $	*/
 /*	$NetBSD: options.c,v 1.6 1996/03/26 23:54:18 mrg Exp $	*/
 
 /*-
@@ -48,10 +48,6 @@
 #include "cpio.h"
 #include "tar.h"
 #include "extern.h"
-
-#ifndef _PATH_DEFTAPE
-#define _PATH_DEFTAPE "/dev/st0"
-#endif
 
 /*
  * argv[0] names. Used for tar and cpio emulation
@@ -205,7 +201,7 @@ FSUB fsub[] = {
 	tar_opt},
 
 /* 5: POSIX USTAR */
-	{"ustar", 10240, BLKMULT, 0, 1, BLKMULT, 0, ustar_id, ustar_strd,
+	{"ustar", 10240, BLKMULT, 0, 1, BLKMULT, 0, ustar_id, no_op,
 	ustar_rd, tar_endrd, no_op, ustar_wr, tar_endwr, tar_trail,
 	tar_opt},
 
@@ -1230,7 +1226,8 @@ cpio_options(int argc, char **argv)
 				 * create an archive
 				 */
 				act = ARCHIVE;
-				frmt = &(fsub[F_CPIO]);
+				if (frmt == NULL)
+					frmt = &(fsub[F_CPIO]);
 				break;
 			case 'p':
 				/*

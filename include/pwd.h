@@ -45,7 +45,8 @@
 
 #define	_PASSWORD_LEN	128	/* max length, not counting NUL */
 
-char		*user_from_uid(uid_t, int);
+int		 uid_from_user(const char *, uid_t *);
+const char	*user_from_uid(uid_t, int);
 char		*bcrypt_gensalt(u_int8_t);
 char		*bcrypt(const char *, const char *);
 int		bcrypt_newhash(const char *, int, char *, size_t);

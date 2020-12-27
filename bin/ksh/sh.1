@@ -1,5 +1,4 @@
-<<<<<<< bin/ksh/sh.1
-=======
+.\"	$OpenBSD: sh.1,v 1.152 2019/05/22 15:23:23 schwarze Exp $
 .\"
 .\" Copyright (c) 2015 Jason McIntyre <jmc@openbsd.org>
 .\"
@@ -15,8 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-<<<<<<< bin/ksh/sh.1
-=======
+.Dd $Mdocdate: May 22 2019 $
 .Dt SH 1
 .Os
 .Sh NAME
@@ -497,7 +495,7 @@ to the index of the next variable to be processed.
 The string
 .Ar optstring
 contains a list of acceptable options;
-a colon following an option indicates it may take an argument.
+a colon following an option indicates it requires an argument.
 If an option not recognised by
 .Ar optstring
 is found,
@@ -702,12 +700,10 @@ display the names and values of all shell variables.
 The options are described in the options description
 at the beginning of this manual.
 The sequence
-<<<<<<< bin/ksh/sh.1
-=======
+.Ql set -o
 displays the current option settings;
 the sequence
-<<<<<<< bin/ksh/sh.1
-=======
+.Ql set +o
 displays,
 in a format suitable to be reinput to the shell,
 a command suitable to achieve the current option settings.
@@ -717,12 +713,10 @@ with the special parameter
 .Sq #
 set to the number of positional parameters.
 The sequence
-<<<<<<< bin/ksh/sh.1
-=======
+.Ql set --
 indicates an end to option processing
 (i.e. only arguments follow);
-<<<<<<< bin/ksh/sh.1
-=======
+.Ql set --
 by itself unsets all positional parameters
 and sets
 .Sq #
@@ -872,7 +866,11 @@ it keeps a record of commands run in a
 either internally in memory or in a file,
 as determined by
 .Dv HISTFILE .
-The command line and all the commands in command history
+When
+.Cm vi
+command line editing mode is enabled
+.Pq set -o vi ,
+the command line and all the commands in command history
 can be edited using commands similar to those of
 .Xr vi 1 .
 .Pp
@@ -1744,7 +1742,7 @@ or within
 to have them executed in the current environment:
 .Pp
 .D1 Pq Ar command ...
-.D1 Brq Ar \ \&command ... Ns ;\&
+.D1 Brq \& Ar command ... ; No \&
 .Pp
 Any redirections specified after the closing bracket apply to all commands
 within the brackets.
@@ -1761,7 +1759,7 @@ A
 executes a series of commands for each item in a list.
 Its format is:
 .Bd -unfilled -offset indent
-.No for Ar name Op in Ar word ...
+.No for Ar name Op in Op Ar word ...
 do
 .No "   " Ar command
 .No "   " Ar ...
@@ -1779,8 +1777,10 @@ The construct
 .Qq in word ...
 can be omitted,
 which is equivalent to: in \&"$@\&".
-The exit status is zero if there are no items
-or otherwise the exit status of the last command executed.
+The exit status is that of the last command executed.
+If there are no items,
+.Ar command
+is not executed and the exit status is zero.
 .Pp
 A
 .Em while loop
@@ -2123,7 +2123,6 @@ The default is
 .Sq +\ \& .
 .It PWD
 The absolute pathname to the current working directory.
-Assignments to this variable are ignored.
 .El
 .Sh ASYNCHRONOUS EVENTS
 The following signals affect the execution of
@@ -2227,6 +2226,16 @@ and
 built-ins should exit/return from the outermost loop if the argument
 .Ar n
 is greater than the level of loops.
+.It
+The default value for the
+.Ev PS1
+user prompt contains the machine's hostname,
+followed by
+.Sq $\ \&
+for normal users and
+.Sq #\ \&
+for root;
+POSIX does not include the hostname.
 .El
 .Pp
 Enabling POSIX mode changes some behaviour to make

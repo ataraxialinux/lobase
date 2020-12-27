@@ -1,4 +1,4 @@
-/*	$OpenBSD: util.c,v 1.40 2015/07/26 14:32:19 millert Exp $	*/
+/*	$OpenBSD: util.c,v 1.45 2019/12/02 22:17:32 jca Exp $	*/
 
 /*
  * patch - a program to apply diffs to original files
@@ -31,7 +31,6 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <libgen.h>
 #include <paths.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -43,7 +42,6 @@
 #include "common.h"
 #include "util.h"
 #include "backupfile.h"
-#include "pathnames.h"
 
 /* Rename a file, copying it if necessary. */
 
@@ -61,9 +59,9 @@ move_file(const char *from, const char *to)
 			say("Moving %s to stdout.\n", from);
 #endif
 		fromfd = open(from, O_RDONLY);
-		if (fromfd < 0)
+		if (fromfd == -1)
 			pfatal("internal error, can't reopen %s", from);
-		while ((i = read(fromfd, buf, sizeof buf)) > 0)
+		while ((i = read(fromfd, buf, bufsz)) > 0)
 			if (write(STDOUT_FILENO, buf, i) != i)
 				pfatal("write failed");
 		close(fromfd);
@@ -78,7 +76,7 @@ move_file(const char *from, const char *to)
 	if (debug & 4)
 		say("Moving %s to %s.\n", from, to);
 #endif
-	if (rename(from, to) < 0) {
+	if (rename(from, to) == -1) {
 		if (errno != EXDEV || copy_file(from, to) < 0) {
 			say("Can't create %s, output is in %s: %s\n",
 			    to, from, strerror(errno));
@@ -140,7 +138,7 @@ backup_file(const char *orig)
 	if (debug & 4)
 		say("Moving %s to %s.\n", orig, bakname);
 #endif
-	if (rename(orig, bakname) < 0) {
+	if (rename(orig, bakname) == -1) {
 		if (errno != EXDEV || copy_file(orig, bakname) < 0)
 			return -1;
 	}
@@ -157,12 +155,12 @@ copy_file(const char *from, const char *to)
 	ssize_t	i;
 
 	tofd = open(to, O_CREAT|O_TRUNC|O_WRONLY, 0666);
-	if (tofd < 0)
+	if (tofd == -1)
 		return -1;
 	fromfd = open(from, O_RDONLY, 0);
-	if (fromfd < 0)
+	if (fromfd == -1)
 		pfatal("internal error, can't reopen %s", from);
-	while ((i = read(fromfd, buf, sizeof buf)) > 0)
+	while ((i = read(fromfd, buf, bufsz)) > 0)
 		if (write(tofd, buf, i) != i)
 			pfatal("write to %s failed", to);
 	close(fromfd);
@@ -269,11 +267,11 @@ ask(const char *fmt, ...)
 	if (ttyfd < 0)
 		ttyfd = open(_PATH_TTY, O_RDONLY);
 	if (ttyfd >= 0) {
-		if ((nr = read(ttyfd, buf, sizeof(buf))) > 0 &&
+		if ((nr = read(ttyfd, buf, bufsz)) > 0 &&
 		    buf[nr - 1] == '\n')
 			buf[nr - 1] = '\0';
 	}
-	if (ttyfd < 0 || nr <= 0) {
+	if (ttyfd == -1 || nr <= 0) {
 		/* no tty or error reading, pretend user entered 'return' */
 		putchar('\n');
 		buf[0] = '\0';
@@ -291,10 +289,10 @@ set_signals(int reset)
 	if (!reset) {
 		hupval = signal(SIGHUP, SIG_IGN);
 		if (hupval != SIG_IGN)
-			hupval = (sig_t) my_exit;
+			hupval = my_sigexit;
 		intval = signal(SIGINT, SIG_IGN);
 		if (intval != SIG_IGN)
-			intval = (sig_t) my_exit;
+			intval = my_sigexit;
 	}
 	signal(SIGHUP, hupval);
 	signal(SIGINT, intval);
@@ -395,11 +393,8 @@ version(void)
 	my_exit(EXIT_SUCCESS);
 }
 
-/*
- * Exit with cleanup.
- */
 void
-my_exit(int status)
+my_cleanup(void)
 {
 	unlink(TMPINNAME);
 	if (!toutkeep)
@@ -407,5 +402,24 @@ my_exit(int status)
 	if (!trejkeep)
 		unlink(TMPREJNAME);
 	unlink(TMPPATNAME);
+}
+
+/*
+ * Exit with cleanup.
+ */
+void
+my_exit(int status)
+{
+	my_cleanup();
 	exit(status);
+}
+
+/*
+ * Exit with cleanup, from a signal handler.
+ */
+void
+my_sigexit(int signo)
+{
+	my_cleanup();
+	_exit(2);
 }

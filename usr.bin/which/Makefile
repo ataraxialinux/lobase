@@ -4,7 +4,7 @@
 
 PROG=	which
 MAN=	which.1 whereis.1
-LINKS=	${BINDIR}/which ${BINDIR}/whereis
+LINKS=	which ${DESTDIR}${BINDIR}/whereis
 
 # XXX: put the updated man page in the objdir?
 check_path_in_man:

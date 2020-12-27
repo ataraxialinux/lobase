@@ -1,4 +1,4 @@
-/*	$OpenBSD: patch.c,v 1.64 2017/06/12 14:23:26 deraadt Exp $	*/
+/*	$OpenBSD: patch.c,v 1.69 2019/12/02 22:17:32 jca Exp $	*/
 
 /*
  * patch - a program to apply diffs to original files
@@ -26,7 +26,6 @@
  * behaviour
  */
 
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -34,6 +33,7 @@
 #include <ctype.h>
 #include <getopt.h>
 #include <limits.h>
+#include <paths.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -43,12 +43,12 @@
 #include "pch.h"
 #include "inp.h"
 #include "backupfile.h"
-#include "pathnames.h"
 #include "ed.h"
 
 mode_t		filemode = 0644;
 
-char		buf[MAXLINELEN];	/* general purpose buffer */
+char		*buf;			/* general purpose buffer */
+size_t		 bufsz;			/* general purpose buffer size */
 
 bool		using_plan_a = true;	/* try to keep everything in memory */
 bool		out_of_mem = false;	/* ran out of memory in plan a */
@@ -154,6 +154,11 @@ main(int argc, char *argv[])
 		my_exit(2);
 	}
 
+	bufsz = INITLINELEN;
+	if ((buf = malloc(bufsz)) == NULL)
+		pfatal("allocating input buffer");
+	buf[0] = '\0';
+
 	setvbuf(stdout, NULL, _IOLBF, 0);
 	setvbuf(stderr, NULL, _IOLBF, 0);
 	for (i = 0; i < MAXFILEC; i++)
@@ -167,25 +172,25 @@ main(int argc, char *argv[])
 	i++;
 	if (asprintf(&TMPOUTNAME, "%.*s/patchoXXXXXXXXXX", i, tmpdir) == -1)
 		fatal("cannot allocate memory");
-	if ((fd = mkstemp(TMPOUTNAME)) < 0)
+	if ((fd = mkstemp(TMPOUTNAME)) == -1)
 		pfatal("can't create %s", TMPOUTNAME);
 	close(fd);
 
 	if (asprintf(&TMPINNAME, "%.*s/patchiXXXXXXXXXX", i, tmpdir) == -1)
 		fatal("cannot allocate memory");
-	if ((fd = mkstemp(TMPINNAME)) < 0)
+	if ((fd = mkstemp(TMPINNAME)) == -1)
 		pfatal("can't create %s", TMPINNAME);
 	close(fd);
 
 	if (asprintf(&TMPREJNAME, "%.*s/patchrXXXXXXXXXX", i, tmpdir) == -1)
 		fatal("cannot allocate memory");
-	if ((fd = mkstemp(TMPREJNAME)) < 0)
+	if ((fd = mkstemp(TMPREJNAME)) == -1)
 		pfatal("can't create %s", TMPREJNAME);
 	close(fd);
 
 	if (asprintf(&TMPPATNAME, "%.*s/patchpXXXXXXXXXX", i, tmpdir) == -1)
 		fatal("cannot allocate memory");
-	if ((fd = mkstemp(TMPPATNAME)) < 0)
+	if ((fd = mkstemp(TMPPATNAME)) == -1)
 		pfatal("can't create %s", TMPPATNAME);
 	close(fd);
 
@@ -455,6 +460,7 @@ get_some_switches(void)
 		{"context",		no_argument,		0,	'c'},
 		{"debug",		required_argument,	0,	'x'},
 		{"directory",		required_argument,	0,	'd'},
+		{"dry-run",		no_argument,		0,	'C'},
 		{"ed",			no_argument,		0,	'e'},
 		{"force",		no_argument,		0,	'f'},
 		{"forward",		no_argument,		0,	'N'},
@@ -485,11 +491,7 @@ get_some_switches(void)
 	Argv_last = Argv;
 	if (!Argc)
 		return;
-#ifdef __GLIBC__
-	optind = 0;
-#else
 	optreset = optind = 1;
-#endif
 	while ((ch = getopt_long(Argc, Argv, options, longopts, NULL)) != -1) {
 		switch (ch) {
 		case 'b':
@@ -515,7 +517,7 @@ get_some_switches(void)
 			check_only = true;
 			break;
 		case 'd':
-			if (chdir(optarg) < 0)
+			if (chdir(optarg) == -1)
 				pfatal("can't cd to %s", optarg);
 			break;
 		case 'D':

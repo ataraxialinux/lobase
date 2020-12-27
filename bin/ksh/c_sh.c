@@ -1,4 +1,4 @@
-/*	$OpenBSD: c_sh.c,v 1.62 2017/12/27 13:02:57 millert Exp $	*/
+/*	$OpenBSD: c_sh.c,v 1.64 2020/05/22 07:50:07 benno Exp $	*/
 
 /*
  * built-in Bourne commands
@@ -33,7 +33,7 @@ c_shift(char **wp)
 {
 	struct block *l = genv->loc;
 	int n;
-	long val;
+	int64_t val;
 	char *arg;
 
 	if (ksh_getopt(wp, &builtin_opt, null) == '?')
@@ -424,6 +424,8 @@ int
 c_eval(char **wp)
 {
 	struct source *s;
+	struct source *saves = source;
+	int savef;
 	int rv;
 
 	if (ksh_getopt(wp, &builtin_opt, null) == '?')
@@ -458,7 +460,11 @@ c_eval(char **wp)
 		exstat = subst_exstat;
 	}
 
+	savef = Flag(FERREXIT);
+	Flag(FERREXIT) = 0;
 	rv = shell(s, false);
+	Flag(FERREXIT) = savef;
+	source = saves;
 	afree(s, ATEMP);
 	return (rv);
 }

@@ -31,7 +31,6 @@
  */
 
 #include <sys/types.h>
-#include <sys/ioctl.h>
 
 #include <err.h>
 #include <stdio.h>
@@ -91,11 +90,7 @@ gread(struct termios *tp, char *s)
 		}
 		if (CHK("ispeed")) {
 			(void)sscanf(ep, "%ld", &tmp);
-#if 0
 			tp->c_ispeed = tmp;
-#else
-			cfsetispeed(tp, tmp);
-#endif
 			continue;
 		}
 		if (CHK("lflag")) {
@@ -108,11 +103,7 @@ gread(struct termios *tp, char *s)
 		}
 		if (CHK("ospeed")) {
 			(void)sscanf(ep, "%ld", &tmp);
-#if 0
 			tp->c_ospeed = tmp;
-#else
-			cfsetospeed(tp, tmp);
-#endif
 			continue;
 		}
 		for (cp = cchars1; cp->name != NULL; ++cp)

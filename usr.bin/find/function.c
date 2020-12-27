@@ -1,4 +1,4 @@
-/*	$OpenBSD: function.c,v 1.45 2017/01/03 21:31:16 tedu Exp $	*/
+/*	$OpenBSD: function.c,v 1.49 2020/04/09 15:07:49 jca Exp $	*/
 
 /*-
  * Copyright (c) 1990, 1993
@@ -344,10 +344,10 @@ f_delete(PLAN *plan, FTSENT *entry)
 #endif
 	/* rmdir directories, unlink everything else */
 	if (S_ISDIR(entry->fts_statp->st_mode)) {
-		if (rmdir(entry->fts_accpath) < 0 && errno != ENOTEMPTY)
+		if (rmdir(entry->fts_accpath) == -1 && errno != ENOTEMPTY)
 			warn("-delete: rmdir(%s)", entry->fts_path);
 	} else {
-		if (unlink(entry->fts_accpath) < 0)
+		if (unlink(entry->fts_accpath) == -1)
 			warn("-delete: unlink(%s)", entry->fts_path);
 
 	}
@@ -551,7 +551,7 @@ run_f_exec(PLAN *plan)
  *
  *	If -exec ... {} +, use only the first array, but make it large
  *	enough to hold 5000 args (cf. src/usr.bin/xargs/xargs.c for a
- *	discussion), and then allocate ARG_MAX - 4K of space for args.
+ *	discussion), and then allocate space for args.
  */
 PLAN *
 c_exec(char *unused, char ***argvp, int isok)
@@ -600,6 +600,9 @@ c_exec(char *unused, char ***argvp, int isok)
 		errx(1, "-ok: terminating \"+\" not permitted.");
 
 	if (new->flags & F_PLUSSET) {
+		long arg_max;
+		extern char **environ;
+		char **ep;
 		u_int c, bufsize;
 
 		cnt = ap - *argvp - 1;			/* units are words */
@@ -612,6 +615,18 @@ c_exec(char *unused, char ***argvp, int isok)
 		new->ep_narg = 0;
 
 		/*
+		 * Compute the maximum space we can use for arguments
+		 * passed to execve(2).
+		 */
+		arg_max = sysconf(_SC_ARG_MAX);
+		if (arg_max == -1)
+			err(1, "-exec: sysconf(_SC_ARG_MAX) failed");
+		for (ep = environ; *ep != NULL; ep++) {
+			/* 1 byte for each '\0' */
+			arg_max -= strlen(*ep) + 1 + sizeof(*ep);
+		}
+
+		/*
 		 * Count up the space of the user's arguments, and
 		 * subtract that from what we allocate.
 		 */
@@ -621,8 +636,9 @@ c_exec(char *unused, char ***argvp, int isok)
 			c += strlen(*argv) + 1;
  			new->e_argv[cnt] = *argv;
  		}
-		bufsize = ARG_MAX - 4 * 1024 - c;
-
+		if (arg_max < 4 * 1024 + c)
+			errx(1, "-exec: no space left to run child command");
+		bufsize = arg_max - 4 * 1024 - c;
 
 		/*
 		 * Allocate, and then initialize current, base, and
@@ -948,20 +964,17 @@ PLAN *
 c_group(char *gname, char ***ignored, int unused)
 {
 	PLAN *new;
-	struct group *g;
 	gid_t gid;
     
 	ftsoptions &= ~FTS_NOSTAT;
 
-	g = getgrnam(gname);
-	if (g == NULL) {
+	if (gid_from_group(gname, &gid) == -1) {
 		const char *errstr;
 
 		gid = strtonum(gname, 0, GID_MAX, &errstr);
 		if (errstr)
 			errx(1, "-group: %s: no such group", gname);
-	} else
-		gid = g->gr_gid;
+	}
     
 	new = palloc(N_GROUP, f_group);
 	new->g_data = gid;
@@ -1558,20 +1571,17 @@ PLAN *
 c_user(char *username, char ***ignored, int unused)
 {
 	PLAN *new;
-	struct passwd *p;
 	uid_t uid;
     
 	ftsoptions &= ~FTS_NOSTAT;
 
-	p = getpwnam(username);
-	if (p == NULL) {
+	if (uid_from_user(username, &uid) == -1) {
 		const char *errstr;
 
 		uid = strtonum(username, 0, UID_MAX, &errstr);
 		if (errstr)
 			errx(1, "-user: %s: no such user", username);
-	} else
-		uid = p->pw_uid;
+	}
 
 	new = palloc(N_USER, f_user);
 	new->u_data = uid;

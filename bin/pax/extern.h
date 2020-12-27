@@ -1,4 +1,4 @@
-/*	$OpenBSD: extern.h,v 1.58 2017/09/12 17:11:11 otto Exp $	*/
+/*	$OpenBSD: extern.h,v 1.60 2020/03/23 20:04:19 espie Exp $	*/
 /*	$NetBSD: extern.h,v 1.5 1996/03/26 23:54:16 mrg Exp $	*/
 
 /*-
@@ -96,14 +96,6 @@ int buf_fill(void);
 int buf_flush(int);
 
 /*
- * cache.c
- */
-int usrtb_start(void);
-int grptb_start(void);
-int uid_name(char *, uid_t *);
-int gid_name(char *, gid_t *);
-
-/*
  * cpio.c
  */
 int cpio_strd(void);
@@ -136,7 +128,7 @@ int cross_lnk(ARCHD *);
 int chk_same(ARCHD *);
 int node_creat(ARCHD *);
 int unlnk_exist(char *, int);
-int chk_path(char *, uid_t, gid_t);
+int chk_path(char *, uid_t, gid_t, int);
 void set_ftime(const char *, const struct timespec *,
     const struct timespec *, int);
 void fset_ftime(const char *, int, const struct timespec *,
@@ -301,7 +293,6 @@ int tar_id(char *, int);
 int tar_opt(void);
 int tar_rd(ARCHD *, char *);
 int tar_wr(ARCHD *);
-int ustar_strd(void);
 int ustar_id(char *, int);
 int ustar_rd(ARCHD *, char *);
 int ustar_wr(ARCHD *);

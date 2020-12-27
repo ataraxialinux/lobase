@@ -1,5 +1,5 @@
 AC_PREREQ([2.68])
-AC_INIT([lobase], [0.0], [https://github.com/Duncaen/lobase/issues], [lobase])
+AC_INIT([mobobase], [0.0], [https://github.com/ataraxialinux/mobobase/issues], [mobobase])
 AC_CONFIG_SRCDIR([])
 AC_CONFIG_HEADERS([config.h])
 
@@ -26,7 +26,7 @@ AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(rt, clock_gettime)
 
 # Checks for header files.
-AC_CHECK_HEADERS([sys/tree.h login_cap.h])
+AC_CHECK_HEADERS([sys/tree.h login_cap.h bsd_auth.h])
 AC_HEADER_TIME
 AC_HEADER_DIRENT
 AC_PROG_RANLIB

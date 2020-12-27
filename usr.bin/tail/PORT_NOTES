@@ -1,3 +1,0 @@
-There are small differences in how -f handles file truncations,
-kqueue provides events for file truncations, inotify just notifies
-about a file modification.

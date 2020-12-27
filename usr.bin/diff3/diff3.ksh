@@ -1,8 +1,8 @@
 #!/bin/ksh -
 #
-# $OpenBSD: diff3.ksh,v 1.4 2006/02/22 22:35:11 jmc Exp $
+# $OpenBSD: diff3.ksh,v 1.6 2019/09/28 17:30:07 ajacoutot Exp $
 #
-# Copyright (c) 2003 Todd C. Miller <Todd.Miller@courtesan.com>
+# Copyright (c) 2003 Todd C. Miller <millert@openbsd.org>
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -24,8 +24,7 @@
 set -o posix		# set POSIX mode to prevent +foo in getopts
 OPTIND=1		# force getopts to reset itself
 
-# XXX/lobase: why?
-# export PATH=/bin:/usr/bin
+export PATH=/usr/bin:/bin:/usr/sbin:/sbin
 diff3prog=/usr/libexec/diff3prog
 USAGE="usage: diff3 [-3aEeXx] file1 file2 file3"
 
@@ -59,7 +58,7 @@ if [ $? -ne 0 ]; then
 	rm -f $TMP1
 	exit 1
 fi
-trap "rm -f $TMP1 $TMP2" 0 1 2 13 15
+trap "/bin/rm -f $TMP1 $TMP2" 0 1 2 13 15
 diff $dflags -- $1 $3 > $TMP1
 diff $dflags -- $2 $3 > $TMP2
 $diff3prog $d3flags -- $TMP1 $TMP2 $1 $2 $3

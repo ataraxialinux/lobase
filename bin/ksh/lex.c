@@ -4,15 +4,13 @@
  * lexical analysis and source input
  */
 
-
-#include <sys/time.h>
-
 #include <ctype.h>
 #include <errno.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "sh.h"
 

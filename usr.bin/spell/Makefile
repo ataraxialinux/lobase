@@ -1,34 +1,25 @@
 #	$OpenBSD: Makefile,v 1.2 2002/03/02 16:20:33 millert Exp $
 
-.TOPDIR?=../..
+
+TOPDIR?=../..
 
 PROG=	spellprog
 MAN=	spell.1
 SRCS=	spellprog.c look.c
-BINDIR=	${libexec}
-
-all: spell
-
-spell: spell.ksh
-	sed \
-		-e "s;/bin/ksh;${bindir}/ksh;g" \
-		-e "s;/usr/libexec;${libexecdir};g" \
-		-e "s;/usr/share;${datadir};g" \
-		$< >$@
+BINDIR=	/usr/libexec
 
 afterinstall:
-	${INSTALL} -d ${DESTDIR}${datadir}/dict/special
 	${INSTALL} ${INSTALL_COPY} -o ${BINOWN} -g ${BINGRP} -m ${BINMODE} \
-		spell ${DESTDIR}${bindir}/spell
+		${.CURDIR}/spell.ksh ${DESTDIR}/usr/bin/spell
 	${INSTALL} ${INSTALL_COPY} -o ${BINOWN} -g ${BINGRP} -m ${NONBINMODE} \
-		${.CURDIR}/stop ${DESTDIR}${datadir}/dict
+		${.CURDIR}/stop ${DESTDIR}/usr/share/dict
 	${INSTALL} ${INSTALL_COPY} -o ${BINOWN} -g ${BINGRP} -m ${NONBINMODE} \
-		${.CURDIR}/american ${DESTDIR}${datadir}/dict
+		${.CURDIR}/american ${DESTDIR}/usr/share/dict
 	${INSTALL} ${INSTALL_COPY} -o ${BINOWN} -g ${BINGRP} -m ${NONBINMODE} \
-		${.CURDIR}/british ${DESTDIR}${datadir}/dict
+		${.CURDIR}/british ${DESTDIR}/usr/share/dict
 	${INSTALL} ${INSTALL_COPY} -o ${BINOWN} -g ${BINGRP} -m ${NONBINMODE} \
-		${.CURDIR}/special.4bsd  ${DESTDIR}${datadir}/dict/special/4bsd
+		${.CURDIR}/special.4bsd  ${DESTDIR}/usr/share/dict/special/4bsd
 	${INSTALL} ${INSTALL_COPY} -o ${BINOWN} -g ${BINGRP} -m ${NONBINMODE} \
-		${.CURDIR}/special.math ${DESTDIR}${datadir}/dict/special/math
+		${.CURDIR}/special.math ${DESTDIR}/usr/share/dict/special/math
 
 include ${.TOPDIR}/mk/bsd.prog.mk

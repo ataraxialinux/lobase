@@ -1,4 +1,4 @@
-/*	$OpenBSD: eval.c,v 1.59 2018/01/16 22:52:32 jca Exp $	*/
+/*	$OpenBSD: eval.c,v 1.66 2020/09/13 15:39:09 tb Exp $	*/
 
 /*
  * Expansion - quoting, separation, substitution, globbing
@@ -47,6 +47,8 @@ typedef struct Expand {
 #define IFS_WORD	0	/* word has chars (or quotes) */
 #define IFS_WS		1	/* have seen IFS white-space */
 #define IFS_NWS		2	/* have seen IFS non-white-space */
+#define IFS_IWS		3	/* beginning of word, ignore IFS white-space */
+#define IFS_QUOTE	4	/* beg.w/quote, becomes IFS_WORD unless "$@" */
 
 static	int	varsub(Expand *, char *, char *, int *, int *);
 static	int	comsub(Expand *, char *);
@@ -58,11 +60,16 @@ static	char   *tilde(char *);
 static	char   *homedir(char *);
 static void	alt_expand(XPtrV *, char *, char *, char *, int);
 
+static struct tbl *varcpy(struct tbl *);
+
 /* compile and expand word */
 char *
 substitute(const char *cp, int f)
 {
 	struct source *s, *sold;
+
+	if (disable_subst)
+		return str_save(cp, ATEMP);
 
 	sold = source;
 	s = pushs(SWSTR, ATEMP);
@@ -190,7 +197,8 @@ expand(char *cp,	/* input word */
 	doblank = 0;
 	make_magic = 0;
 	word = (f&DOBLANK) ? IFS_WS : IFS_WORD;
-	st_head.next = NULL;
+
+	memset(&st_head, 0, sizeof(st_head));
 	st = &st_head;
 
 	while (1) {
@@ -211,7 +219,17 @@ expand(char *cp,	/* input word */
 				c = *sp++;
 				break;
 			case OQUOTE:
-				word = IFS_WORD;
+				switch (word) {
+				case IFS_QUOTE:
+					/* """something */
+					word = IFS_WORD;
+					break;
+				case IFS_WORD:
+					break;
+				default:
+					word = IFS_QUOTE;
+					break;
+				}
 				tilde_ok = 0;
 				quote = 1;
 				continue;
@@ -291,6 +309,8 @@ expand(char *cp,	/* input word */
 				if (f&DOBLANK)
 					doblank++;
 				tilde_ok = 0;
+				if (word == IFS_QUOTE && type != XNULLSUB)
+					word = IFS_WORD;
 				if (type == XBASE) {	/* expand? */
 					if (!st->next) {
 						SubType *newst;
@@ -305,7 +325,7 @@ expand(char *cp,	/* input word */
 					st->stype = stype;
 					st->base = Xsavepos(ds, dp);
 					st->f = f;
-					st->var = x.var;
+					st->var = varcpy(x.var);
 					st->quote = quote;
 					/* skip qualifier(s) */
 					if (stype)
@@ -352,6 +372,11 @@ expand(char *cp,	/* input word */
 						f |= DOTEMP_;
 						/* FALLTHROUGH */
 					default:
+						/* '-' '+' '?' */
+						if (quote)
+							word = IFS_WORD;
+						else if (dp == Xstring(ds, dp))
+							word = IFS_IWS;
 						/* Enable tilde expansion */
 						tilde_ok = 1;
 						f |= DOTILDE;
@@ -381,10 +406,17 @@ expand(char *cp,	/* input word */
 					 */
 					x.str = trimsub(str_val(st->var),
 						dp, st->stype);
-					if (x.str[0] != '\0' || st->quote)
+					if (x.str[0] != '\0') {
+						word = IFS_IWS;
 						type = XSUB;
-					else
+					} else if (quote) {
+						word = IFS_WORD;
+						type = XSUB;
+					} else {
+						if (dp == Xstring(ds, dp))
+							word = IFS_IWS;
 						type = XNULLSUB;
+					}
 					if (f&DOBLANK)
 						doblank++;
 					st = st->prev;
@@ -416,6 +448,10 @@ expand(char *cp,	/* input word */
 					if (f&DOBLANK)
 						doblank++;
 					st = st->prev;
+					if (quote || !*x.str)
+						word = IFS_WORD;
+					else
+						word = IFS_IWS;
 					continue;
 				case '?':
 				    {
@@ -457,12 +493,8 @@ expand(char *cp,	/* input word */
 			type = XBASE;
 			if (f&DOBLANK) {
 				doblank--;
-				/* not really correct: x=; "$x$@" should
-				 * generate a null argument and
-				 * set A; "${@:+}" shouldn't.
-				 */
-				if (dp == Xstring(ds, dp))
-					word = IFS_WS;
+				if (dp == Xstring(ds, dp) && word != IFS_WORD)
+					word = IFS_IWS;
 			}
 			continue;
 
@@ -497,7 +529,12 @@ expand(char *cp,	/* input word */
 				if (c == 0) {
 					if (quote && !x.split)
 						continue;
+					if (!quote && word == IFS_WS)
+						continue;
+					/* this is so we don't terminate */
 					c = ' ';
+					/* now force-emit a word */
+					goto emit_word;
 				}
 				if (quote && x.split) {
 					/* terminate word for "$@" */
@@ -548,15 +585,15 @@ expand(char *cp,	/* input word */
 			 *	-----------------------------------
 			 *	IFS_WORD	w/WS	w/NWS	w
 			 *	IFS_WS		-/WS	w/NWS	-
-			 *	IFS_NWS		-/NWS	w/NWS	w
+			 *	IFS_NWS		-/NWS	w/NWS	-
+			 *	IFS_IWS		-/WS	w/NWS	-
 			 *   (w means generate a word)
-			 * Note that IFS_NWS/0 generates a word (at&t ksh
-			 * doesn't do this, but POSIX does).
 			 */
-			if (word == IFS_WORD ||
-			    (!ctype(c, C_IFSWS) && c && word == IFS_NWS)) {
-				char *p;
-
+			if ((word == IFS_WORD) || (word == IFS_QUOTE) || (c &&
+			    (word == IFS_IWS || word == IFS_NWS) &&
+			    !ctype(c, C_IFSWS))) {
+ 				char *p;
+ emit_word:
 				*dp++ = '\0';
 				p = Xclose(ds, dp);
 				if (fdo & DOBRACE_)
@@ -577,7 +614,7 @@ expand(char *cp,	/* input word */
 					Xinit(ds, dp, 128, ATEMP);
 			}
 			if (c == 0)
-				return;
+				goto done;
 			if (word != IFS_NWS)
 				word = ctype(c, C_IFSWS) ? IFS_WS : IFS_NWS;
 		} else {
@@ -682,6 +719,14 @@ expand(char *cp,	/* input word */
 			word = IFS_WORD;
 		}
 	}
+
+done:
+	for (st = &st_head; st != NULL; st = st->next) {
+		if (st->var == NULL || (st->var->flag & RDONLY) == 0)
+			continue;
+
+		afree(st->var, ATEMP);
+	}
 }
 
 /*
@@ -732,7 +777,7 @@ varsub(Expand *xp, char *sp, char *word,
 		if (Flag(FNOUNSET) && c == 0 && !zero_ok)
 			errorf("%s: parameter not set", sp);
 		*stypep = 0; /* unqualified variable/string substitution */
-		xp->str = str_save(ulton((unsigned long)c, 10), ATEMP);
+		xp->str = str_save(u64ton((uint64_t)c, 10), ATEMP);
 		return XSUB;
 	}
 
@@ -998,12 +1043,12 @@ globit(XString *xs,	/* dest string */
 		if ((check & GF_EXCHECK) ||
 		    ((check & GF_MARKDIR) && (check & GF_GLOBBED))) {
 #define stat_check()	(stat_done ? stat_done : \
-			    (stat_done = stat(Xstring(*xs, xp), &statb) < 0 \
+			    (stat_done = stat(Xstring(*xs, xp), &statb) == -1 \
 				? -1 : 1))
 			struct stat lstatb, statb;
 			int stat_done = 0;	 /* -1: failed, 1 ok */
 
-			if (lstat(Xstring(*xs, xp), &lstatb) < 0)
+			if (lstat(Xstring(*xs, xp), &lstatb) == -1)
 				return;
 			/* special case for systems which strip trailing
 			 * slashes from regular files (eg, /etc/passwd/).
@@ -1285,4 +1330,24 @@ alt_expand(XPtrV *wp, char *start, char *exp_start, char *end, int fdo)
 		}
 	}
 	return;
+}
+
+/*
+ * Copy the given variable if it's flagged as read-only.
+ * Such variables have static storage and only one can therefore be referenced
+ * at a time.
+ * This is necessary in order to allow variable expansion expressions to refer
+ * to multiple read-only variables.
+ */
+static struct tbl *
+varcpy(struct tbl *vp)
+{
+	struct tbl *cpy;
+
+	if (vp == NULL || (vp->flag & RDONLY) == 0)
+		return vp;
+
+	cpy = alloc(sizeof(struct tbl), ATEMP);
+	memcpy(cpy, vp, sizeof(struct tbl));
+	return cpy;
 }

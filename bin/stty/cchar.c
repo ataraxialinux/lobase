@@ -32,7 +32,6 @@
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#include <sys/ttydefaults.h>
 
 #include <err.h>
 #include <limits.h>
@@ -40,7 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
-#include <unistd.h>
+#include <compat.h>
 
 #include "stty.h"
 #include "extern.h"
@@ -54,7 +53,7 @@
  */
 const struct cchar cchars1[] = {
 	{ "discard",	VDISCARD, 	CDISCARD },
-#if 0
+#ifdef __OpenBSD__
 	{ "dsusp", 	VDSUSP,		CDSUSP },
 #endif
 	{ "eof",	VEOF,		CEOF },
@@ -68,7 +67,7 @@ const struct cchar cchars1[] = {
 	{ "quit",	VQUIT,		CQUIT },
 	{ "reprint",	VREPRINT, 	CREPRINT },
 	{ "start",	VSTART,		CSTART },
-#if 0
+#ifdef __OpenBSD__
 	{ "status",	VSTATUS, 	CSTATUS },
 #endif
 	{ "stop",	VSTOP,		CSTOP },

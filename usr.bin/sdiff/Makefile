@@ -1,6 +1,7 @@
 #	$OpenBSD: Makefile,v 1.5 2017/09/05 06:27:38 otto Exp $
 
-.TOPDIR?=../..
+
+TOPDIR?=../..
 
 PROG=sdiff
 SRCS=common.c edit.c sdiff.c

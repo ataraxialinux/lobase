@@ -1,4 +1,4 @@
-/*	$OpenBSD: c_ulimit.c,v 1.27 2018/03/15 16:51:29 anton Exp $	*/
+/*	$OpenBSD: c_ulimit.c,v 1.29 2019/06/28 13:34:59 deraadt Exp $	*/
 
 /*
 	ulimit -- handle "ulimit" builtin
@@ -22,6 +22,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <string.h>
 
 #include "sh.h"
@@ -139,7 +140,7 @@ set_ulimit(const struct limits *l, const char *v, int how)
 	if (strcmp(v, "unlimited") == 0)
 		val = RLIM_INFINITY;
 	else {
-		long rval;
+		int64_t rval;
 
 		if (!evaluate(v, &rval, KSH_RETURN_ERROR, false))
 			return 1;
@@ -161,7 +162,7 @@ set_ulimit(const struct limits *l, const char *v, int how)
 		limit.rlim_cur = val;
 	if (how & HARD)
 		limit.rlim_max = val;
-	if (setrlimit(l->resource, &limit) < 0) {
+	if (setrlimit(l->resource, &limit) == -1) {
 		if (errno == EPERM)
 			bi_errorf("-%c exceeds allowable limit", l->option);
 		else
@@ -187,6 +188,6 @@ print_ulimit(const struct limits *l, int how)
 		shprintf("unlimited\n");
 	else {
 		val /= l->factor;
-		shprintf("%ld\n", (long) val);
+		shprintf("%" PRIi64 "\n", (int64_t) val);
 	}
 }

@@ -1,4 +1,4 @@
-/*	$OpenBSD: key.c,v 1.17 2016/03/23 14:52:42 mmcc Exp $	*/
+/*	$OpenBSD: key.c,v 1.18 2019/06/28 13:35:00 deraadt Exp $	*/
 /*	$NetBSD: key.c,v 1.11 1995/09/07 06:57:11 jtc Exp $	*/
 
 /*-
@@ -29,13 +29,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#ifndef TTYDISC
-#define TTYDISC 0
-#endif
 
+#include <sys/ttycom.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#include <sys/ttydefaults.h>
 
 #include <err.h>
 #include <errno.h>
@@ -65,10 +62,8 @@ void	f_rows(struct info *);
 void	f_sane(struct info *);
 void	f_size(struct info *);
 void	f_speed(struct info *);
-#if 0
 void	f_ostart(struct info *);
 void	f_ostop(struct info *);
-#endif
 void	f_tty(struct info *);
 __END_DECLS
 
@@ -94,10 +89,8 @@ static struct key {
 	{ "nl",		f_nl,		F_OFFOK },
 	{ "old",	f_tty,		0 },
 	{ "ospeed",	f_ospeed,	F_NEEDARG },
-#if 0
 	{ "ostart",	f_ostart,	0 },
 	{ "ostop",	f_ostop,	0 },
-#endif
 	{ "raw",	f_raw,		F_OFFOK },
 	{ "rows",	f_rows,		F_NEEDARG },
 	{ "sane",	f_sane,		0 },
@@ -206,7 +199,6 @@ f_everything(struct info *ip)
 void
 f_extproc(struct info *ip)
 {
-#if 0
 
 	if (ip->off) {
 		int tmp = 0;
@@ -216,12 +208,6 @@ f_extproc(struct info *ip)
 		(void)ioctl(ip->fd, TIOCEXT, &tmp);
 	}
 	ip->set = 1;
-#else
-	if (ip->off)
-		f_sane(ip);
-	else
-		ip->t.c_lflag &= EXTPROC;
-#endif
 }
 
 void
@@ -312,11 +298,7 @@ f_sane(struct info *ip)
 	ip->t.c_iflag = TTYDEF_IFLAG;
 	ip->t.c_iflag |= ICRNL;
 	/* preserve user-preference flags in lflag */
-#if 0
-#define	LKEEP	(ECHOKE|ECHOE|ECHOK|ECHOPRT|ECHOCTL|ALTWERASE|TOSTOP|NOFLSH)
-#else
 #define	LKEEP	(ECHOKE|ECHOE|ECHOK|ECHOPRT|ECHOCTL|TOSTOP|NOFLSH)
-#endif
 	ip->t.c_lflag = TTYDEF_LFLAG | (ip->t.c_lflag & LKEEP);
 	ip->t.c_oflag = TTYDEF_OFLAG;
 	ip->set = 1;
@@ -342,22 +324,20 @@ f_tty(struct info *ip)
 	int tmp;
 
 	tmp = TTYDISC;
-	if (ioctl(ip->fd, TIOCSETD, &tmp) < 0)
+	if (ioctl(ip->fd, TIOCSETD, &tmp) == -1)
 		err(1, "TIOCSETD");
 }
 
-#if 0
 void
 f_ostart(struct info *ip)
 {
-	if (ioctl(ip->fd, TIOCSTART) < 0)
+	if (ioctl(ip->fd, TIOCSTART) == -1)
 		err(1, "TIOCSTART");
 }
 
 void
 f_ostop(struct info *ip)
 {
-	if (ioctl(ip->fd, TIOCSTOP) < 0)
+	if (ioctl(ip->fd, TIOCSTOP) == -1)
 		err(1, "TIOCSTOP");
 }
-#endif

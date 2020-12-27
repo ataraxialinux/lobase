@@ -1,6 +1,7 @@
 #	$OpenBSD: Makefile,v 1.22 2016/03/30 06:38:45 jmc Exp $
 
-.TOPDIR?=../..
+
+TOPDIR?=../..
 
 PROG=	compress
 SRCS=	main.c zopen.c gzopen.c nullopen.c
@@ -16,10 +17,10 @@ LINKS=	${BINDIR}/compress ${BINDIR}/uncompress \
 LDADD=-lz
 DPADD=${LIBZ}
 
-#afterinstall:
-#	install -c -o ${BINOWN} -g ${BINGRP} -m ${BINMODE} \
-#	    ${.CURDIR}/zmore ${.CURDIR}/zdiff \
-#	    ${.CURDIR}/zforce ${.CURDIR}/gzexe ${.CURDIR}/znew \
-#	    ${DESTDIR}${BINDIR}
+afterinstall:
+	install -c -o ${BINOWN} -g ${BINGRP} -m ${BINMODE} \
+	    ${.CURDIR}/zmore ${.CURDIR}/zdiff \
+	    ${.CURDIR}/zforce ${.CURDIR}/gzexe ${.CURDIR}/znew \
+	    ${DESTDIR}${BINDIR}
 
 include ${.TOPDIR}/mk/bsd.prog.mk

@@ -110,6 +110,10 @@ int execvpe(const char *, char *const *, char *const *);
 int pledge(const char *, const char *[]);
 #endif /* !HAVE_PLEDGE */
 
+#ifndef HAVE_UNVEIL
+int unveil(const char *path, const char *permissions);
+#endif /* !HAVE_UNVEIL */
+
 #ifndef HAVE_SETPROGNAME
 const char * getprogname(void);
 void setprogname(const char *progname);
@@ -184,4 +188,8 @@ struct passwd *pw_dup(const struct passwd *);
 int issetugid(void);
 
 #define	OPEN_MAX	64	/* max open files per process */
+#endif
+
+#ifndef _POSIX_VDISABLE
+#define _POSIX_VDISABLE		(0377)
 #endif

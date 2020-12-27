@@ -1,10 +1,9 @@
-/*	$OpenBSD: edit.c,v 1.64 2018/03/15 16:51:29 anton Exp $	*/
+/*	$OpenBSD: edit.c,v 1.69 2019/06/28 13:34:59 deraadt Exp $	*/
 
 /*
  * Command line editing - common code
  *
  */
-
 
 #include "config.h"
 
@@ -13,7 +12,6 @@
 
 #include <ctype.h>
 #include <errno.h>
-#include <libgen.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -67,7 +65,7 @@ check_sigwinch(void)
 		struct winsize ws;
 
 		got_sigwinch = 0;
-		if (procpid == kshpid && ioctl(tty_fd, TIOCGWINSZ, &ws) >= 0) {
+		if (procpid == kshpid && ioctl(tty_fd, TIOCGWINSZ, &ws) == 0) {
 			struct tbl *vp;
 
 			/* Do NOT export COLUMNS/LINES.  Many applications
@@ -81,10 +79,10 @@ check_sigwinch(void)
 				    ws.ws_col;
 
 				if ((vp = typeset("COLUMNS", 0, 0, 0, 0)))
-					setint(vp, (long) ws.ws_col);
+					setint(vp, (int64_t) ws.ws_col);
 			}
 			if (ws.ws_row && (vp = typeset("LINES", 0, 0, 0, 0)))
-				setint(vp, (long) ws.ws_row);
+				setint(vp, (int64_t) ws.ws_row);
 		}
 	}
 }
@@ -139,10 +137,10 @@ x_flush(void)
 	shf_flush(shl_out);
 }
 
-void
+int
 x_putc(int c)
 {
-	shf_putc(c, shl_out);
+	return shf_putc(c, shl_out);
 }
 
 void
@@ -392,7 +390,7 @@ x_file_glob(int flags, const char *str, int slen, char ***wordsp)
 		 * which evaluated to an empty string (e.g.,
 		 * "$FOO" when there is no FOO, etc).
 		 */
-		 if ((lstat(words[0], &statb) < 0) ||
+		 if ((lstat(words[0], &statb) == -1) ||
 		    words[0][0] == '\0') {
 			x_free_words(nwords, words);
 			words = NULL;
@@ -616,12 +614,12 @@ x_try_array(const char *buf, int buflen, const char *want, int wantlen,
 	}
 
 	/* Try to find the array. */
-	if (asprintf(&name, "complete_%.*s_%d", cmdlen, cmd, n) < 0)
+	if (asprintf(&name, "complete_%.*s_%d", cmdlen, cmd, n) == -1)
 		internal_errorf("unable to allocate memory");
 	v = global(name);
 	free(name);
 	if (~v->flag & (ISSET|ARRAY)) {
-		if (asprintf(&name, "complete_%.*s", cmdlen, cmd) < 0)
+		if (asprintf(&name, "complete_%.*s", cmdlen, cmd) == -1)
 			internal_errorf("unable to allocate memory");
 		v = global(name);
 		free(name);

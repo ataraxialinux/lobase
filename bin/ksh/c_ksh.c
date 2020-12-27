@@ -1,4 +1,4 @@
-/*	$OpenBSD: c_ksh.c,v 1.59 2018/03/15 16:51:29 anton Exp $	*/
+/*	$OpenBSD: c_ksh.c,v 1.62 2019/06/28 13:34:59 deraadt Exp $	*/
 
 /*
  * built-in Korn commands: c_*
@@ -114,9 +114,9 @@ c_cd(char **wp)
 			simplify_path(Xstring(xs, xp));
 			rval = chdir(try = Xstring(xs, xp));
 		}
-	} while (rval < 0 && cdpath != NULL);
+	} while (rval == -1 && cdpath != NULL);
 
-	if (rval < 0) {
+	if (rval == -1) {
 		if (cdnode)
 			bi_errorf("%s: bad directory", dir);
 		else
@@ -186,7 +186,7 @@ c_pwd(char **wp)
 	}
 	p = current_wd[0] ? (physical ? get_phys_path(current_wd) : current_wd) :
 	    NULL;
-	if (p && access(p, R_OK) < 0)
+	if (p && access(p, R_OK) == -1)
 		p = NULL;
 	if (!p) {
 		freep = p = ksh_get_wd(NULL, 0);
@@ -374,7 +374,7 @@ c_print(char **wp)
 		}
 		for (s = Xstring(xs, xp); len > 0; ) {
 			n = write(fd, s, len);
-			if (n < 0) {
+			if (n == -1) {
 				if (flags & PO_COPROC)
 					restore_pipe(opipe);
 				if (errno == EINTR) {
@@ -410,9 +410,26 @@ c_whence(char **wp)
 	int pflag = 0, vflag = 0, Vflag = 0;
 	int ret = 0;
 	int optc;
-	int iam_whence = wp[0][0] == 'w';
+	int iam_whence;
 	int fcflags;
-	const char *options = iam_whence ? "pv" : "pvV";
+	const char *options;
+
+	switch (wp[0][0]) {
+	case 'c': /* command */
+		iam_whence = 0;
+		options = "pvV";
+		break;
+	case 't': /* type */
+		vflag = 1;
+		/* FALLTHROUGH */
+	case 'w': /* whence */
+		iam_whence = 1;
+		options = "pv";
+		break;
+	default:
+		bi_errorf("builtin not handled by %s", __func__);
+		return 1;
+	}
 
 	while ((optc = ksh_getopt(wp, &builtin_opt, options)) != -1)
 		switch (optc) {
@@ -429,7 +446,6 @@ c_whence(char **wp)
 			return 1;
 		}
 	wp += builtin_opt.optind;
-
 
 	fcflags = FC_BI | FC_PATH | FC_FUNC;
 	if (!iam_whence) {
@@ -527,6 +543,13 @@ c_command(char **wp)
 	/* Let c_whence do the work.  Note that c_command() must be
 	 * a distinct function from c_whence() (tested in comexec()).
 	 */
+	return c_whence(wp);
+}
+
+int
+c_type(char **wp)
+{
+	/* Let c_whence do the work. type = command -V = whence -v */
 	return c_whence(wp);
 }
 
@@ -1017,7 +1040,7 @@ int
 c_let(char **wp)
 {
 	int rv = 1;
-	long val;
+	int64_t val;
 
 	if (wp[1] == NULL) /* at&t ksh does this */
 		bi_errorf("no arguments");
@@ -1222,7 +1245,7 @@ c_kill(char **wp)
 			/* use killpg if < -1 since -1 does special things for
 			 * some non-killpg-endowed kills
 			 */
-			if ((n < -1 ? killpg(-n, sig) : kill(n, sig)) < 0) {
+			if ((n < -1 ? killpg(-n, sig) : kill(n, sig)) == -1) {
 				bi_errorf("%s: %s", p, strerror(errno));
 				rv = 1;
 			}
@@ -1392,6 +1415,7 @@ const struct builtin kshbuiltins [] = {
 	{"print", c_print},
 	{"pwd", c_pwd},
 	{"*=readonly", c_typeset},
+	{"type", c_type},
 	{"=typeset", c_typeset},
 	{"+unalias", c_unalias},
 	{"whence", c_whence},

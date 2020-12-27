@@ -31,13 +31,12 @@
  */
 
 #include <sys/types.h>
-#include <sys/ioctl.h>
 
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <termios.h>
-#include <unistd.h>
+#include <compat.h>
 
 #include "stty.h"
 #include "extern.h"
@@ -57,7 +56,7 @@ print(struct termios *tp, struct winsize *wp, int ldisc, enum FMT fmt)
 
 	cnt = 0;
 
-#if TTYDISC
+#ifdef __OpenBSD__
 	/* Line discipline. */
 	if (ldisc != TTYDISC) {
 		switch(ldisc) {
@@ -105,14 +104,14 @@ print(struct termios *tp, struct winsize *wp, int ldisc, enum FMT fmt)
 	put("-echonl", ECHONL, 0);
 	put("-echoctl", ECHOCTL, 0);
 	put("-echoprt", ECHOPRT, 0);
-#if ALTWERASE
+#ifdef __OpenBSD__
 	put("-altwerase", ALTWERASE, 0);
 #endif
 	put("-noflsh", NOFLSH, 0);
 	put("-tostop", TOSTOP, 0);
 	put("-flusho", FLUSHO, 0);
 	put("-pendin", PENDIN, 0);
-#if NOKERNINFO
+#ifdef __OpenBSD__
 	put("-nokerninfo", NOKERNINFO, 0);
 #endif
 	put("-extproc", EXTPROC, 0);
@@ -145,10 +144,8 @@ print(struct termios *tp, struct winsize *wp, int ldisc, enum FMT fmt)
 	put("-onocr", ONOCR, 0);
 	put("-onlret", ONLRET, 0);
 	put("-olcuc", OLCUC, 0);
-#if OXTABS
+#ifdef __OpenBSD__
 	put("-oxtabs", OXTABS, 1);
-#endif
-#if ONOEOT
 	put("-onoeot", ONOEOT, 0);
 #endif
 
@@ -176,7 +173,7 @@ print(struct termios *tp, struct winsize *wp, int ldisc, enum FMT fmt)
 	put("-clocal", CLOCAL, 0);
 	put("-cstopb", CSTOPB, 0);
 	put("-crtscts", CRTSCTS, 0);
-#if MDMBUF
+#ifdef __OpenBSD__
 	put("-mdmbuf", MDMBUF, 0);
 #endif
 

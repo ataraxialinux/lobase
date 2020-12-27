@@ -42,7 +42,6 @@
 #ifndef MAIL_DEF_H
 #define MAIL_DEF_H
 
-
 #include <sys/stat.h>
 
 #include <ctype.h>
@@ -52,7 +51,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
-#include <time.h>
 #include <unistd.h>
 #include <limits.h>
 #include <vis.h>

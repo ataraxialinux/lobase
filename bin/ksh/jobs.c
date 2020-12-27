@@ -1,4 +1,4 @@
-/*	$OpenBSD: jobs.c,v 1.60 2018/03/15 16:51:29 anton Exp $	*/
+/*	$OpenBSD: jobs.c,v 1.62 2020/07/07 10:33:58 jca Exp $	*/
 
 /*
  * Process and job control
@@ -70,6 +70,7 @@ struct proc {
 #define JF_REMOVE	0x200	/* flagged for removal (j_jobs()/j_notify()) */
 #define JF_USETTYMODE	0x400	/* tty mode saved if process exits normally */
 #define JF_SAVEDTTYPGRP	0x800	/* j->saved_ttypgrp is valid */
+#define JF_PIPEFAIL	0x1000	/* pipefail on when job was started */
 
 typedef struct job Job;
 struct job {
@@ -198,11 +199,11 @@ j_suspend(void)
 	if (ttypgrp_ok) {
 		tcsetattr(tty_fd, TCSADRAIN, &tty_state);
 		if (restore_ttypgrp >= 0) {
-			if (tcsetpgrp(tty_fd, restore_ttypgrp) < 0) {
+			if (tcsetpgrp(tty_fd, restore_ttypgrp) == -1) {
 				warningf(false, "%s: tcsetpgrp() failed: %s",
 				    __func__, strerror(errno));
 			} else {
-				if (setpgid(0, restore_ttypgrp) < 0) {
+				if (setpgid(0, restore_ttypgrp) == -1) {
 					warningf(false,
 					    "%s: setpgid() failed: %s",
 					    __func__, strerror(errno));
@@ -222,12 +223,12 @@ j_suspend(void)
 	sigaction(SIGTSTP, &osa, NULL);
 	if (ttypgrp_ok) {
 		if (restore_ttypgrp >= 0) {
-			if (setpgid(0, kshpid) < 0) {
+			if (setpgid(0, kshpid) == -1) {
 				warningf(false, "%s: setpgid() failed: %s",
 				    __func__, strerror(errno));
 				ttypgrp_ok = 0;
 			} else {
-				if (tcsetpgrp(tty_fd, kshpid) < 0) {
+				if (tcsetpgrp(tty_fd, kshpid) == -1) {
 					warningf(false,
 					    "%s: tcsetpgrp() failed: %s",
 					    __func__, strerror(errno));
@@ -318,7 +319,7 @@ j_change(void)
 			while (1) {
 				pid_t ttypgrp;
 
-				if ((ttypgrp = tcgetpgrp(tty_fd)) < 0) {
+				if ((ttypgrp = tcgetpgrp(tty_fd)) == -1) {
 					warningf(false,
 					    "%s: tcgetpgrp() failed: %s",
 					    __func__, strerror(errno));
@@ -334,12 +335,12 @@ j_change(void)
 			setsig(&sigtraps[tt_sigs[i]], SIG_IGN,
 			    SS_RESTORE_DFL|SS_FORCE);
 		if (ttypgrp_ok && our_pgrp != kshpid) {
-			if (setpgid(0, kshpid) < 0) {
+			if (setpgid(0, kshpid) == -1) {
 				warningf(false, "%s: setpgid() failed: %s",
 				    __func__, strerror(errno));
 				ttypgrp_ok = 0;
 			} else {
-				if (tcsetpgrp(tty_fd, kshpid) < 0) {
+				if (tcsetpgrp(tty_fd, kshpid) == -1) {
 					warningf(false,
 					    "%s: tcsetpgrp() failed: %s",
 					    __func__, strerror(errno));
@@ -421,6 +422,8 @@ exchild(struct op *t, int flags, volatile int *xerrok,
 		 */
 		j->flags = (flags & XXCOM) ? JF_XXCOM :
 		    ((flags & XBGND) ? 0 : (JF_FG|JF_USETTYMODE));
+		if (Flag(FPIPEFAIL))
+			j->flags |= JF_PIPEFAIL;
 		timerclear(&j->usrtime);
 		timerclear(&j->systime);
 		j->state = PRUNNING;
@@ -438,13 +441,13 @@ exchild(struct op *t, int flags, volatile int *xerrok,
 
 	/* create child process */
 	forksleep = 1;
-	while ((i = fork()) < 0 && errno == EAGAIN && forksleep < 32) {
+	while ((i = fork()) == -1 && errno == EAGAIN && forksleep < 32) {
 		if (intrsig)	 /* allow user to ^C out... */
 			break;
 		sleep(forksleep);
 		forksleep <<= 1;
 	}
-	if (i < 0) {
+	if (i == -1) {
 		kill_job(j, SIGKILL);
 		remove_job(j, "fork failed");
 		sigprocmask(SIG_SETMASK, &omask, NULL);
@@ -675,7 +678,7 @@ j_kill(const char *cp, int sig)
 	} else {
 		if (j->state == PSTOPPED && (sig == SIGTERM || sig == SIGHUP))
 			(void) killpg(j->pgrp, SIGCONT);
-		if (killpg(j->pgrp, sig) < 0) {
+		if (killpg(j->pgrp, sig) == -1) {
 			bi_errorf("%s: %s", cp, strerror(errno));
 			rv = 1;
 		}
@@ -739,7 +742,7 @@ j_resume(const char *cp, int bg)
 			/* See comment in j_waitj regarding saved_ttypgrp. */
 			if (ttypgrp_ok &&
 			    tcsetpgrp(tty_fd, (j->flags & JF_SAVEDTTYPGRP) ?
-			    j->saved_ttypgrp : j->pgrp) < 0) {
+			    j->saved_ttypgrp : j->pgrp) == -1) {
 				if (j->flags & JF_SAVEDTTY)
 					tcsetattr(tty_fd, TCSADRAIN, &tty_state);
 				sigprocmask(SIG_SETMASK, &omask, NULL);
@@ -757,14 +760,14 @@ j_resume(const char *cp, int bg)
 			async_job = NULL;
 	}
 
-	if (j->state == PRUNNING && killpg(j->pgrp, SIGCONT) < 0) {
+	if (j->state == PRUNNING && killpg(j->pgrp, SIGCONT) == -1) {
 		int	err = errno;
 
 		if (!bg) {
 			j->flags &= ~JF_FG;
 			if (ttypgrp_ok && (j->flags & JF_SAVEDTTY))
 				tcsetattr(tty_fd, TCSADRAIN, &tty_state);
-			if (ttypgrp_ok && tcsetpgrp(tty_fd, our_pgrp) < 0) {
+			if (ttypgrp_ok && tcsetpgrp(tty_fd, our_pgrp) == -1) {
 				warningf(true,
 				    "fg: 2nd tcsetpgrp(%d, %d) failed: %s",
 				    tty_fd, (int) our_pgrp,
@@ -1030,7 +1033,7 @@ j_waitj(Job *j,
 			if (j->state == PSTOPPED &&
 			    (j->saved_ttypgrp = tcgetpgrp(tty_fd)) >= 0)
 				j->flags |= JF_SAVEDTTYPGRP;
-			if (tcsetpgrp(tty_fd, our_pgrp) < 0) {
+			if (tcsetpgrp(tty_fd, our_pgrp) == -1) {
 				warningf(true,
 				    "%s: tcsetpgrp(%d, %d) failed: %s",
 				    __func__, tty_fd, (int)our_pgrp,
@@ -1084,7 +1087,30 @@ j_waitj(Job *j,
 
 	j_usrtime = j->usrtime;
 	j_systime = j->systime;
-	rv = j->status;
+
+	if (j->flags & JF_PIPEFAIL) {
+		Proc *p;
+		int status;
+
+		rv = 0;
+		for (p = j->proc_list; p != NULL; p = p->next) {
+			switch (p->state) {
+			case PEXITED:
+				status = WEXITSTATUS(p->status);
+				break;
+			case PSIGNALLED:
+				status = 128 + WTERMSIG(p->status);
+				break;
+			default:
+				status = 0;
+				break;
+			}
+			if (status)
+				rv = status;
+		}
+	} else
+		rv = j->status;
+
 
 	if (!(flags & JW_ASYNCNOTIFY) &&
 	    (!Flag(FMONITOR) || j->state != PSTOPPED)) {
@@ -1615,7 +1641,7 @@ kill_job(Job *j, int sig)
 
 	for (p = j->proc_list; p != NULL; p = p->next)
 		if (p->pid != 0)
-			if (kill(p->pid, sig) < 0)
+			if (kill(p->pid, sig) == -1)
 				rval = -1;
 	return rval;
 }
