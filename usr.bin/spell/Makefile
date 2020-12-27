@@ -6,9 +6,10 @@ TOPDIR?=../..
 PROG=	spellprog
 MAN=	spell.1
 SRCS=	spellprog.c look.c
-BINDIR=	/usr/libexec
+BINDIR=	${libexecdir}
 
 afterinstall:
+	mkdir -p ${DESTDIR}/usr/share/dict/special
 	${INSTALL} ${INSTALL_COPY} -o ${BINOWN} -g ${BINGRP} -m ${BINMODE} \
 		${.CURDIR}/spell.ksh ${DESTDIR}/usr/bin/spell
 	${INSTALL} ${INSTALL_COPY} -o ${BINOWN} -g ${BINGRP} -m ${NONBINMODE} \

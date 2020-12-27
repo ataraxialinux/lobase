@@ -15,4 +15,8 @@ CFLAGS+= -I${.CURDIR}
 COPTS+=	-Wall
 YFLAGS=
 
+afterinstall:
+	chown ${BINOWN}:${BINOWN} ${DESTDIR}/${BINDIR}/doas
+	chmod ${BINMODE} ${DESTDIR}/${BINDIR}/doas
+
 include ${.TOPDIR}/mk/bsd.prog.mk

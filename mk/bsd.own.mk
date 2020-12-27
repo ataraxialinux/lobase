@@ -43,6 +43,11 @@ LIBOWN?=	$(BINOWN)
 LIBGRP?=	$(BINGRP)
 LIBMODE?=	${NONBINMODE}
 
+DOCDIR?=	/usr/share/doc
+DOCGRP?=	bin
+DOCOWN?=	root
+DOCMODE?=	${NONBINMODE}
+
 ifndef CDIAGFLAGS
 CDIAGFLAGS=	-Wall -Wpointer-arith -Wuninitialized -Wstrict-prototypes
 CDIAGFLAGS+=	-Wmissing-prototypes -Wunused -Wsign-compare

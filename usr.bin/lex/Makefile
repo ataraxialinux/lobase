@@ -23,8 +23,8 @@ LDADD+=-lm
 
 MAN = flex.1
 
-LINKS=  ${BINDIR}/lex ${BINDIR}/flex \
-		${BINDIR}/lex ${BINDIR}/flex++
+LINKS=  lex ${DESTDIR}/${BINDIR}/flex \
+		lex ${DESTDIR}/${BINDIR}/flex++
 
 VERSION="2.5.39"
 

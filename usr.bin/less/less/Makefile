@@ -12,7 +12,7 @@ SRCS=	main.c screen.c brac.c ch.c charset.c cmdbuf.c command.c cvt.c \
 LDADD=	-lcurses
 DPADD=	${LIBCURSES}
 
-LINKS=	${BINDIR}/less ${BINDIR}/more
+LINKS=	less ${DESTDIR}/${BINDIR}/more
 
 MAN=	less.1 more.1
 BINDIR=	/usr/bin
@@ -22,11 +22,12 @@ HELPDIR=${SHAREDIR}/misc
 CFLAGS+=-I${.CURDIR}/.. -DSYSDIR=\"/etc\" -DHELPDIR=\"${HELPDIR}\"
 
 beforeinstall:
+	mkdir -p ${DESTDIR}${HELPDIR}
 	${INSTALL} ${INSTALL_COPY} -o ${SHAREOWN} -g ${SHAREGRP} \
-	    -m ${SHAREMODE} ${.CURDIR}/../less.hlp \
+	    -m ${SHAREMODE} $(shell pwd | sed 's|/obj||')/../less.hlp \
 	    ${DESTDIR}${HELPDIR}/less.help
 	${INSTALL} ${INSTALL_COPY} -o ${SHAREOWN} -g ${SHAREGRP} \
-	    -m ${SHAREMODE} ${.CURDIR}/../more.hlp \
+	    -m ${SHAREMODE} $(shell pwd | sed 's|/obj||')/../more.hlp \
 	    ${DESTDIR}${HELPDIR}/more.help
 
 include ${.TOPDIR}/mk/bsd.prog.mk

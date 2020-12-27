@@ -6,13 +6,13 @@ TOPDIR?=../..
 PROG=	compress
 SRCS=	main.c zopen.c gzopen.c nullopen.c
 MAN=	compress.1 gzexe.1 gzip.1 zdiff.1 zforce.1 zmore.1 znew.1
-LINKS=	${BINDIR}/compress ${BINDIR}/uncompress \
-	${BINDIR}/compress ${BINDIR}/zcat \
-	${BINDIR}/compress ${BINDIR}/gzip \
-	${BINDIR}/compress ${BINDIR}/gunzip \
-	${BINDIR}/compress ${BINDIR}/gzcat \
-	${BINDIR}/zdiff ${BINDIR}/zcmp \
-	${BINDIR}/zmore ${BINDIR}/zless
+LINKS=	compress ${DESTDIR}/${BINDIR}/uncompress \
+	compress ${DESTDIR}/${BINDIR}/zcat \
+	compress ${DESTDIR}/${BINDIR}/gzip \
+	compress ${DESTDIR}/${BINDIR}/gunzip \
+	compress ${DESTDIR}/${BINDIR}/gzcat \
+	zdiff ${DESTDIR}/${BINDIR}/zcmp \
+	zmore ${DESTDIR}/${BINDIR}/zless
 
 LDADD=-lz
 DPADD=${LIBZ}

@@ -17,7 +17,7 @@ DEFS=	-DEMACS -DVI
 CFLAGS+=${DEFS} -I. -I${.CURDIR} -I${.CURDIR}/../../lib/libopenbsd/gen
 MAN=	ksh.1 sh.1
 
-LINKS=	${BINDIR}/ksh ${BINDIR}/rksh
-LINKS+=	${BINDIR}/ksh ${BINDIR}/sh
+LINKS=	ksh ${DESTDIR}/${BINDIR}/rksh
+LINKS+=	ksh ${DESTDIR}/${BINDIR}/sh
 
 include ${.TOPDIR}/mk/bsd.prog.mk

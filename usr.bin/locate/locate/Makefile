@@ -6,8 +6,8 @@ PROG=	locate
 SRCS=	util.c locate.c
 CFLAGS+= -I${.CURDIR}
 MAN=	locate.1	locate.updatedb.8
+BINDIR = ${bindir}
 SCRIPTS= updatedb mklocatedb
-
 
 beforeinstall:
 	-@for i in ${SCRIPTS}; do \
