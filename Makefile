@@ -1,4 +1,4 @@
-SUBDIR=	lib bin usr.bin distrib share
+SUBDIR=	lib bin usr.bin share
 
 ifeq (clean,$(filter clean,$(MAKECMDGOALS)))
 SUBDIR+=regress
