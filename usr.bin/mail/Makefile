@@ -10,6 +10,7 @@ SRCS=	version.c aux.c cmd1.c cmd2.c cmd3.c cmdtab.c collect.c \
 SFILES=	mail.help mail.tildehelp
 EFILES=	mail.rc
 LINKS=	mail ${DESTDIR}/${BINDIR}/Mail mail ${DESTDIR}/${BINDIR}/mailx
+CFLAGS += -fcommon
 
 distribution:
 	cd ${.CURDIR}/misc; ${INSTALL} ${INSTALL_COPY} -o root -g wheel \

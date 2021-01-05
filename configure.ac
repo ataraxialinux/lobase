@@ -50,6 +50,8 @@ AC_CHECK_DECLS([sys_siglist, sys_signame], [], [], [
 #include <signal.h>
 ])
 
+PKG_CHECK_MODULES([PU4LINUX], [pu4linux], [], AC_MSG_ERROR([PU4Linux libraries not found]))
+
 # AC_SUBST(HAVE_STRLCAT, "$have_strlcat")
 # AC_SUBST(HAVE_STRLCPY, "$have_strlcpy")
 # AC_SUBST(HAVE_GETENTROPY, "$have_getentropy")

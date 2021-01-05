@@ -37,6 +37,7 @@
 
 
 #include <sys/types.h>
+#include <unistd_pu4linux.h>
 
 #define	STDIN_FILENO	0	/* standard input file descriptor */
 #define	STDOUT_FILENO	1	/* standard output file descriptor */
@@ -53,8 +54,6 @@ int	 getresuid(uid_t *, uid_t *, uid_t *);
 void	*setmode(const char *);
 int	 setresgid(gid_t, gid_t, gid_t);
 int	 setresuid(uid_t, uid_t, uid_t);
-int	 pledge(const char *, const char *[]);
-int	 unveil(const char *path, const char *permissions);
 
 #ifndef _GETOPT_DEFINED_
 #define _GETOPT_DEFINED_

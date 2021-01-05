@@ -106,14 +106,6 @@ int execvpe(const char *, char *const *, char *const *);
 /* int setresuid(uid_t, uid_t, uid_t); */
 #endif /* !HAVE_SETRESUID */
 
-#ifndef HAVE_PLEDGE
-int pledge(const char *, const char *[]);
-#endif /* !HAVE_PLEDGE */
-
-#ifndef HAVE_UNVEIL
-int unveil(const char *path, const char *permissions);
-#endif /* !HAVE_UNVEIL */
-
 #ifndef HAVE_SETPROGNAME
 const char * getprogname(void);
 void setprogname(const char *progname);
