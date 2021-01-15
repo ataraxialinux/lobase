@@ -14,6 +14,7 @@ LINKS=	compress ${DESTDIR}/${BINDIR}/uncompress \
 	zdiff ${DESTDIR}/${BINDIR}/zcmp \
 	zmore ${DESTDIR}/${BINDIR}/zless
 
+CFLAGS+= -fcommon
 LDADD=-lz
 DPADD=${LIBZ}
 
