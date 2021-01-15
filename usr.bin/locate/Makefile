@@ -1,5 +1,0 @@
-#	$OpenBSD: Makefile,v 1.5 1997/09/21 11:49:33 deraadt Exp $
-
-SUBDIR=	bigram code locate
-
-include ${.TOPDIR}/mk/bsd.subdir.mk
