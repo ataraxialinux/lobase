@@ -1,5 +1,5 @@
 AC_PREREQ([2.68])
-AC_INIT([mobobase], [0.0], [https://github.com/ataraxialinux/mobobase/issues], [mobobase])
+AC_INIT([lobase], [0.0], [https://github.com/ataraxialinux/lobase/issues], [lobase])
 AC_CONFIG_SRCDIR([])
 AC_CONFIG_HEADERS([config.h])
 

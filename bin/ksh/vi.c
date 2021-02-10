@@ -73,6 +73,8 @@ static void	vi_macro_reset(void);
 static int	x_vi_putbuf(const char *, size_t);
 static int	isu8cont(unsigned char);
 
+#define	CTRL(x)		((x) == '?' ? 0x7F : (x) & 0x1F)	/* ASCII */
+
 #define C_	0x1		/* a valid command that isn't a M_, E_, U_ */
 #define M_	0x2		/* movement command (h, l, etc.) */
 #define E_	0x4		/* extended command (c, d, y) */

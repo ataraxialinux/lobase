@@ -1,9 +1,5 @@
 SUBDIR=	lib bin usr.bin share
 
-ifeq (clean,$(filter clean,$(MAKECMDGOALS)))
-SUBDIR+=regress
-endif
-
 all:
 clean:
 insteall:

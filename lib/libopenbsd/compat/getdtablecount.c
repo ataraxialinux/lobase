@@ -1,7 +1,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 
-#ifdef __linux__
+//#ifdef __linux__
 int
 getdtablecount(void)
 {
@@ -20,6 +20,6 @@ getdtablecount(void)
 	closedir(dir);
 	return n;
 }
-#else
-#error getdtablecount(2) not supported
-#endif
+//#else
+//#error getdtablecount(2) not supported
+//#endif
