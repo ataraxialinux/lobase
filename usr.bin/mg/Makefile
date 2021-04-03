@@ -33,7 +33,7 @@ SRCS+=	cmode.c cscope.c dired.c grep.c interpreter.c tags.c
 #SRCS+=	log.c
 
 afterinstall:
-	${INSTALL} -d -o root -g wheel ${DESTDIR}${DOCDIR}/mg
+	${INSTALL} -d ${DESTDIR}${DOCDIR}/mg
 	${INSTALL} ${INSTALL_COPY} -o ${DOCOWN} -g ${DOCGRP} -m ${DOCMODE} \
 	    $(shell pwd | sed 's|/obj||')/tutorial ${DESTDIR}${DOCDIR}/mg
 
